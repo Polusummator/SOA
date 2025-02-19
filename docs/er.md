@@ -1,4 +1,4 @@
-User service: `users`, `user_profiles`, `user_roles`, `user_sessions`
+User service: `users`, `user_profiles`, `user_roles`
 
 Posts service: `posts`, `posts_likes`, `posts_views`, `comments`, `comments_likes`
 
@@ -10,7 +10,6 @@ erDiagram
 
     users ||--o{ user_profiles : "has"
     users ||--o{ user_roles : "has"
-    users ||--o{ user_sessions : "has"
 
     users {
         int id PK
@@ -26,20 +25,14 @@ erDiagram
         string full_name
         string bio
         string avatar_url
+        string phone_number
+        date birthday
     }
 
     user_roles {
         int id PK
         int user_id FK
         string role
-    }
-
-    user_sessions {
-        int id PK
-        int user_id FK
-        string token
-        datetime created_at
-        datetime expires_at
     }
 
 
