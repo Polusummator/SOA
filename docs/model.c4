@@ -1,0 +1,88 @@
+specification {
+    element user
+    element system
+    element container
+    element db {
+        style {
+            shape cylinder
+            color gray
+        }
+    }
+}
+
+model {
+    user = user 'User' {
+        style {
+            shape person
+            color green
+        }
+    }
+
+    network = system 'Social network' {
+        
+        ui = container 'UI' {
+            style {
+                color amber
+            }
+        }
+
+        api = container 'API service' {
+            description 'Recieve requests from UI'
+            style {
+                color indigo
+            }
+        }
+
+        users = container 'User service' {
+            description 'Registration, authentication, and storage of user data'
+        }
+
+        stats = container 'Statistic' {
+            description 'Count likes, views, comments'
+        }
+
+        posts = container 'Posts service' {
+            description 'Posts, comments'
+        }
+
+        users_db = db 'PostgreSQL' {
+            description 'Store user data'
+        }
+
+        stats_db = db 'ClickHouse' {
+            description 'Store statistic'
+        }
+
+        posts_db = db 'PostreSQL' {
+            description 'Store posts data'
+        }
+
+        broker = db 'Kafka' {
+            description 'Queue for events'
+            style {
+                shape queue
+            }
+        }
+    }
+
+    user -> network.ui 'Use'
+
+    network.ui -> network.api 'REST API'
+
+    network.api -> network.users 'Route'
+    network.api -> network.posts 'Route'
+    network.api -> network.stats 'Route'
+
+    network.users -> network.users_db 'Read/write'
+    network.stats -> network.stats_db 'Read/write'
+    network.posts -> network.posts_db 'Read/write'
+
+    network.posts -> network.broker 'Write'
+    network.stats -> network.broker 'Subscribe'
+}
+
+views {
+    view index {
+        include *
+  }
+}
