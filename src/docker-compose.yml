@@ -1,0 +1,35 @@
+services:
+  user-service-db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+    ports:
+      - "5432:5432"
+    volumes:
+      - users-data:/var/lib/postgresql/data
+    networks:
+      - user-service-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d db" ]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+
+  user-service:
+    build: user-service
+    ports:
+      - "5000:5000"
+    depends_on:
+      user-service-db:
+        condition: service_healthy
+    networks:
+      - user-service-network
+
+networks:
+  user-service-network:
+
+volumes:
+  users-data:
