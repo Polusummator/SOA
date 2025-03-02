@@ -1,4 +1,13 @@
 services:
+  api-service:
+    build: api-service
+    ports:
+      - "8000:8000"
+    depends_on:
+      - user-service
+    networks:
+      - app-network
+
   user-service-db:
     image: postgres
     restart: always
@@ -26,9 +35,11 @@ services:
       user-service-db:
         condition: service_healthy
     networks:
+      - app-network
       - user-service-network
 
 networks:
+  app-network:
   user-service-network:
 
 volumes:
