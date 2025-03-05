@@ -7,3 +7,7 @@ SQLAlchemy>=2.0.38
 bcrypt>=4.3.0
 python-jose>=3.4.0
 uvicorn>=0.34.0
+
+pytest>=7.4.4
+pytest-cov>=6.0.0
+httpx>=0.28.1
