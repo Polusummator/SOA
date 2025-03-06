@@ -1,6 +1,6 @@
 services:
   api-service:
-    build: api-service
+    build: src/api-service
     ports:
       - "8000:8000"
     depends_on:
@@ -28,7 +28,7 @@ services:
       retries: 5
 
   user-service:
-    build: user-service
+    build: src/user-service
     ports:
       - "5000:5000"
     depends_on:
