@@ -1,0 +1,46 @@
+services:
+  api-service:
+    build: src/api-service
+    ports:
+      - "8000:8000"
+    depends_on:
+      - user-service
+    networks:
+      - app-network
+
+  user-service-db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+    ports:
+      - "5432:5432"
+    volumes:
+      - users-data:/var/lib/postgresql/data
+    networks:
+      - user-service-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d db" ]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+
+  user-service:
+    build: src/user-service
+    ports:
+      - "5000:5000"
+    depends_on:
+      user-service-db:
+        condition: service_healthy
+    networks:
+      - app-network
+      - user-service-network
+
+networks:
+  app-network:
+  user-service-network:
+
+volumes:
+  users-data:
