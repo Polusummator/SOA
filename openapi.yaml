@@ -3,7 +3,7 @@ info:
   title: FastAPI
   version: 0.1.0
 paths:
-  /register:
+  /user/register:
     post:
       summary: Register
       operationId: register_register_post
@@ -38,7 +38,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HTTPValidationError"
-  /login:
+  /user/login:
     post:
       summary: Login
       operationId: login_login_post

@@ -9,7 +9,7 @@ import auth
 app = FastAPI()
 db = UsersDB()
 
-@app.post("/register")
+@app.post("/user/register")
 def register(user: schemas.UserAuth):
     db_user = db.get_user_by_username(user.username)
     if db_user:
@@ -20,7 +20,7 @@ def register(user: schemas.UserAuth):
         raise HTTPException(status_code=400, detail=str(e))
     return {"msg": "User registered"}
 
-@app.post("/login")
+@app.post("/user/login")
 def login(user: schemas.UserAuth, response: Response):
     db_user = db.get_user_by_username(user.username)
     if (not db_user or
