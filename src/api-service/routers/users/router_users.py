@@ -6,7 +6,7 @@ from config import URL_USER_SERVICE
 router = APIRouter(prefix="/user", tags=["users"])
 
 async def proxy_users_request(request: Request, path: str):
-    url = f"{URL_USER_SERVICE}{path}"
+    url = f"http://{URL_USER_SERVICE}{path}"
     async with httpx.AsyncClient() as client:
         try:
             response = await client.request(
