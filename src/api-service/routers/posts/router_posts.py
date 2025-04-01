@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, HTTPException
 import grpc
 
-from posts_client import PostsServiceClient
-from config import URL_POSTS_SERVICE
-from schemas import *
+from .posts_client import PostsServiceClient
+from .schemas import *
 
-router = APIRouter(prefix="/post", tags=["posts"])
+from config import URL_POSTS_SERVICE
+
+router = APIRouter(prefix="/posts", tags=["posts"])
 client = PostsServiceClient(URL_POSTS_SERVICE)
 
 def grpc_post_to_response(grpc_post) -> PostResponse:
@@ -37,7 +38,7 @@ async def create_post(post: PostCreate):
             detail=f"gRPC error: {e.details()}"
         )
 
-@router.delete("/delete/{id}", status_code=204)
+@router.delete("/{post_id}", status_code=204)
 async def delete_post(post_id: int, user_id: int):
     try:
         client.delete_post(post_id=post_id, user_id=user_id)
@@ -52,7 +53,7 @@ async def delete_post(post_id: int, user_id: int):
         )
 
 
-@router.put("/update/{id}", response_model=PostResponse)
+@router.put("/{post_id}", response_model=PostResponse)
 async def update_post(post_id: int, post: PostUpdate):
     try:
         response = client.update_post(
@@ -74,7 +75,7 @@ async def update_post(post_id: int, post: PostUpdate):
             detail=f"gRPC error: {e.details()}"
         )
 
-@router.get("/{id}", response_model=PostResponse)
+@router.get("/{post_id}", response_model=PostResponse)
 async def get_post(post_id: int, user_id: int):
     try:
         response = client.get_post(post_id=post_id, user_id=user_id)
