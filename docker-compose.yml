@@ -38,9 +38,41 @@ services:
       - app-network
       - user-service-network
 
+  posts-service-db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: db
+    ports:
+      - "5433:5432"
+    volumes:
+      - posts-data:/var/lib/postgresql/data
+    networks:
+      - posts-service-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d db" ]
+      interval: 2s
+      timeout: 2s
+      retries: 5
+
+  posts-service:
+    build: src/posts-service
+    ports:
+      - "5001:5000"
+    depends_on:
+      posts-service-db:
+        condition: service_healthy
+    networks:
+      - app-network
+      - posts-service-network
+
 networks:
   app-network:
   user-service-network:
+  posts-service-network:
 
 volumes:
   users-data:
+  posts-data:
