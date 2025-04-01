@@ -112,7 +112,7 @@ def serve():
     posts_service_pb2_grpc.add_PostsServiceServicer_to_server(PostsService(), server)
     server.add_insecure_port('[::]:5000')
     server.start()
-    print("Server started on port 5000")
+    print("Server started on port 5000", flush=True)
     server.wait_for_termination()
 
 if __name__ == '__main__':
