@@ -43,6 +43,12 @@ class UsersDB:
         time_now = datetime.datetime.now()
         try:
             with self.Session() as session:
+                existing_user = session.query(User).filter(
+                    (User.username == user.username) | (User.email == user.email)
+                ).first()
+                if existing_user:
+                    raise ValueError('Username/email already exists')
+
                 new_user = User(
                     username=user.username,
                     password=hashed_password,
@@ -57,8 +63,8 @@ class UsersDB:
                 )
                 session.add(new_profile)
                 session.commit()
-        except SQLAlchemyError:
-            raise ValueError("Username/email already exists")
+        except SQLAlchemyError as e:
+            raise ValueError(f"An error occurred: {e}")
 
     def update_profile(self, profile: schemas.Profile):
         time_now = datetime.datetime.now()
