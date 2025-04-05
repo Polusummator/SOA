@@ -5,6 +5,7 @@ services:
       - "8000:8000"
     depends_on:
       - user-service
+      - posts-service
     networks:
       - app-network
 
@@ -64,6 +65,8 @@ services:
     depends_on:
       posts-service-db:
         condition: service_healthy
+      user-service:
+        condition: service_started
     networks:
       - app-network
       - posts-service-network
