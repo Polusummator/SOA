@@ -138,6 +138,31 @@ def test_list_posts_with_pagination(posts_service, context):
     assert list_response.page == 2
     assert list_response.page_size == 10
 
+def test_get_post_with_invalid_id(posts_service, context):
+    get_request = posts_service_pb2.GetPostRequest(id=999, user_id=1)
+    get_response = posts_service.GetPost(get_request, context)
+    assert context.set_code.call_count == 1
+    assert context.set_code.call_args[0][0] == StatusCode.NOT_FOUND
+
+def test_update_post_with_invalid_id(posts_service, context):
+    update_request = posts_service_pb2.UpdatePostRequest(
+        id=999,
+        title="Updated Post",
+        description="This is an updated test post",
+        is_private=True,
+        user_id=1,
+        tags=["updated", "post"]
+    )
+    update_response = posts_service.UpdatePost(update_request, context)
+    assert context.set_code.call_count == 1
+    assert context.set_code.call_args[0][0] == StatusCode.PERMISSION_DENIED
+
+def test_delete_post_with_invalid_id(posts_service, context):
+    delete_request = posts_service_pb2.DeletePostRequest(id=999, user_id=1)
+    delete_response = posts_service.DeletePost(delete_request, context)
+    assert context.set_code.call_count == 1
+    assert context.set_code.call_args[0][0] == StatusCode.PERMISSION_DENIED
+
 # Wrong user tests
 
 def test_get_private_post_with_wrong_user(posts_service, context):
