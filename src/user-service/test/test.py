@@ -1,7 +1,15 @@
+import pytest
 from fastapi.testclient import TestClient
 from user_service import app
+from database import UsersDB
 
 client = TestClient(app)
+
+@pytest.fixture(autouse=True)
+def clean_db():
+    db = UsersDB()
+    db.delete_all_users()
+    yield
 
 def test_register_user():
     response = client.post("/user/register", json={"username": "testuser", "password": "testpass", "email": "test@example.com"})
@@ -119,3 +127,24 @@ def test_update_my_info_invalid_bio():
     token = login_response.cookies.get("token")
     response = client.put("/user/me/info", json={"bio": "a" * 251}, cookies={"token": token})
     assert response.status_code == 422
+
+
+def test_auth_user_valid_token():
+    client.post("/user/register", json={"username": "testuser0", "password": "testpass", "email": "test0@example.com"})
+    login_response = client.post("/user/login", json={"username": "testuser0", "password": "testpass", "email": "test0@example.com"})
+    token = login_response.cookies.get("token")
+    response = client.get("/user/auth", cookies={"token": token})
+    assert response.status_code == 200
+    assert isinstance(response.json(), int)
+
+
+def test_auth_user_invalid_token():
+    response = client.get("/user/auth", cookies={"token": "invalid-token"})
+    assert response.status_code == 200
+    assert response.json() is None
+
+
+def test_auth_user_no_token():
+    response = client.get("/user/auth")
+    assert response.status_code == 200
+    assert response.json() is None
