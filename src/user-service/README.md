@@ -9,7 +9,7 @@
 ## Примеры запросов
 
 ```shell
-curl -X POST http://localhost:5000/register \
+curl -X POST http://localhost:5000/user/register \
      -H "Content-Type: application/json" \
      -d '{
            "username": "testuser",
@@ -18,7 +18,7 @@ curl -X POST http://localhost:5000/register \
          }'
 
 
-curl -X POST http://localhost:5000/login \
+curl -X POST http://localhost:5000/user/login \
      -H "Content-Type: application/json" \
      -d '{
            "username": "testuser",
