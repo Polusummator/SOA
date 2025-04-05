@@ -9,7 +9,7 @@ import auth
 app = FastAPI()
 db = UsersDB()
 
-@app.post("/register")
+@app.post("/user/register")
 def register(user: schemas.UserAuth):
     db_user = db.get_user_by_username(user.username)
     if db_user:
@@ -20,7 +20,7 @@ def register(user: schemas.UserAuth):
         raise HTTPException(status_code=400, detail=str(e))
     return {"msg": "User registered"}
 
-@app.post("/login")
+@app.post("/user/login")
 def login(user: schemas.UserAuth, response: Response):
     db_user = db.get_user_by_username(user.username)
     if (not db_user or
@@ -66,6 +66,18 @@ def update_my_info(profile: schemas.ProfileUpdate, token: str = Cookie(None)):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return {"msg": "User updated"}
+
+@app.get("/user/auth")
+def auth_user(token: str = Cookie(default=None)):
+    if not token:
+        return None
+    username, ok = auth.check_token(token)
+    if not ok:
+        return None
+    db_user = db.get_user_by_username(username)
+    if not db_user:
+        return None
+    return db_user.id
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5000)
