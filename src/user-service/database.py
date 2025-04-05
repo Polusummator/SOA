@@ -79,3 +79,20 @@ class UsersDB:
     def get_profile_by_userid(self, userid):
         with self.Session() as session:
             return session.query(Profile).filter(Profile.user_id == userid).first()
+
+    def delete_user(self, user_id: int):
+        with self.Session() as session:
+            user = session.query(User).filter(User.id == user_id).first()
+            if user:
+                session.delete(user)
+                session.commit()
+
+    def get_all_users(self):
+        with self.Session() as session:
+            return session.query(User).all()
+
+    def delete_all_users(self):
+        with self.Session() as session:
+            session.query(Profile).delete()
+            session.query(User).delete()
+            session.commit()
