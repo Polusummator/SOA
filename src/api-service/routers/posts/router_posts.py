@@ -1,13 +1,32 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Cookie, Depends
+import httpx
 import grpc
 
 from .posts_client import PostsServiceClient
 from .schemas import *
 
-from config import URL_POSTS_SERVICE
+from config import URL_POSTS_SERVICE, URL_USER_SERVICE
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 client = PostsServiceClient(URL_POSTS_SERVICE)
+user_service_client = httpx.AsyncClient(base_url=f"http://{URL_USER_SERVICE}")
+
+async def get_current_user_id(token: str = Cookie(None)):
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        auth_response = await user_service_client.get(
+            "/user/auth",
+            cookies={"token": token},
+            timeout=5.0
+        )
+        if auth_response.status_code != 200 or not auth_response.json():
+            raise HTTPException(status_code=401, detail="Invalid or expired token")
+        return auth_response.json()
+
+    except httpx.RequestError as e:
+        print(str(e))
+        raise HTTPException(status_code=503, detail="User Service unavailable")
 
 def grpc_post_to_response(grpc_post) -> PostResponse:
     return PostResponse(
@@ -22,13 +41,13 @@ def grpc_post_to_response(grpc_post) -> PostResponse:
     )
 
 @router.post("/", response_model=PostResponse, status_code=201)
-async def create_post(post: PostCreate):
+async def create_post(post: PostBase, user_id: int = Depends(get_current_user_id)):
     try:
         response = client.create_post(
             title=post.title,
             description=post.description,
             is_private=post.is_private,
-            creator_id=post.creator_id,
+            creator_id=user_id,
             tags=post.tags
         )
         return grpc_post_to_response(response.post)
@@ -39,7 +58,7 @@ async def create_post(post: PostCreate):
         )
 
 @router.delete("/{post_id}", status_code=204)
-async def delete_post(post_id: int, user_id: int):
+async def delete_post(post_id: int, user_id: int = Depends(get_current_user_id)):
     try:
         client.delete_post(post_id=post_id, user_id=user_id)
     except grpc.RpcError as e:
@@ -54,14 +73,14 @@ async def delete_post(post_id: int, user_id: int):
 
 
 @router.put("/{post_id}", response_model=PostResponse)
-async def update_post(post_id: int, post: PostUpdate):
+async def update_post(post_id: int, post: PostBase, user_id: int = Depends(get_current_user_id)):
     try:
         response = client.update_post(
             post_id=post_id,
             title=post.title,
             description=post.description,
             is_private=post.is_private,
-            user_id=post.user_id,
+            user_id=user_id,
             tags=post.tags
         )
         if not response.post.id:
@@ -76,7 +95,7 @@ async def update_post(post_id: int, post: PostUpdate):
         )
 
 @router.get("/{post_id}", response_model=PostResponse)
-async def get_post(post_id: int, user_id: int):
+async def get_post(post_id: int, user_id: int = Depends(get_current_user_id)):
     try:
         response = client.get_post(post_id=post_id, user_id=user_id)
         if not response.post.id:
@@ -94,7 +113,7 @@ async def get_post(post_id: int, user_id: int):
 
 
 @router.get("/", response_model=PostsListResponse)
-async def list_posts(page: int, page_size: int, user_id: int):
+async def list_posts(page: int, page_size: int, user_id: int = Depends(get_current_user_id)):
     try:
         response = client.list_posts(
             page=page,
