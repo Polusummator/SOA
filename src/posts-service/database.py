@@ -86,6 +86,12 @@ class PostsDB:
             session.delete(post)
             return True
 
+    def delete_all_posts(self):
+        with self.get_session() as session:
+            session.query(PostTag).delete()
+            session.query(Post).delete()
+            session.commit()
+
     def update_post(self, post_id, title, description, is_private, user_id, tags):
         with self.get_session() as session:
             post = session.query(Post).get(post_id)
