@@ -3,3 +3,6 @@ SQLAlchemy>=2.0.38
 
 grpcio>=1.71.0
 grpcio-tools>=1.62.3
+
+pytest>=7.4.4
+pytest-cov>=6.0.0
