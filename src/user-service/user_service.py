@@ -67,5 +67,17 @@ def update_my_info(profile: schemas.ProfileUpdate, token: str = Cookie(None)):
         raise HTTPException(status_code=400, detail=str(e))
     return {"msg": "User updated"}
 
+@app.get("/user/auth")
+def auth_user(token: str = Cookie(default=None)):
+    if not token:
+        return None
+    username, ok = auth.check_token(token)
+    if not ok:
+        return None
+    db_user = db.get_user_by_username(username)
+    if not db_user:
+        return None
+    return db_user.id
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5000)
