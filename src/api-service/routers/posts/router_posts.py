@@ -131,3 +131,97 @@ async def list_posts(page: int, page_size: int, user_id: int = Depends(get_curre
             status_code=500,
             detail=f"gRPC error: {e.details()}"
         )
+
+def grpc_comment_to_response(grpc_comment) -> CommentResponse:
+    return CommentResponse(
+        id=grpc_comment.id,
+        description=grpc_comment.description,
+        created_at=datetime.datetime.fromisoformat(grpc_comment.created_at),
+        post_id=grpc_comment.post_id,
+        creator_id=grpc_comment.creator_id
+    )
+
+@router.post("/{post_id}/comments", response_model=CommentResponse, status_code=201)
+async def create_comment(
+    post_id: int,
+    comment: CommentBase,
+    user_id: int = Depends(get_current_user_id)
+):
+    try:
+        response = client.comment_post(
+            description=comment.description,
+            post_id=post_id,
+            creator_id=user_id
+        )
+        return grpc_comment_to_response(response.comment)
+    except grpc.RpcError as e:
+        if e.code() == grpc.StatusCode.NOT_FOUND:
+            raise HTTPException(status_code=404, detail="Post not found")
+        elif e.code() == grpc.StatusCode.PERMISSION_DENIED:
+            raise HTTPException(status_code=403, detail="No access to this post")
+        raise HTTPException(
+            status_code=500,
+            detail=f"gRPC error: {e.details()}"
+        )
+
+
+@router.get("/{post_id}/comments", response_model=CommentsListResponse)
+async def list_comments(
+        post_id: int,
+        page: int = 1,
+        page_size: int = 10,
+        user_id: int = Depends(get_current_user_id)
+):
+    try:
+        response = client.list_comments(
+            post_id=post_id,
+            page=page,
+            page_size=page_size,
+            user_id=user_id
+        )
+
+        if not response.comments and response.total == 0:
+            raise HTTPException(
+                status_code=403,
+                detail="No access to this post or post not found"
+            )
+
+        return CommentsListResponse(
+            comments=[grpc_comment_to_response(comment) for comment in response.comments],
+            total=response.total,
+            page=response.page,
+            page_size=response.page_size
+        )
+    except grpc.RpcError as e:
+        if e.code() == grpc.StatusCode.PERMISSION_DENIED:
+            raise HTTPException(
+                status_code=403,
+                detail="No access to this post or post not found"
+            )
+        raise HTTPException(
+            status_code=500,
+            detail=f"gRPC error: {e.details()}"
+        )
+
+@router.post("/{post_id}/like", response_model=LikeResponse)
+async def like_post(
+    post_id: int,
+    user_id: int = Depends(get_current_user_id)
+):
+    try:
+        response = client.like_post(
+            user_id=user_id,
+            post_id=post_id
+        )
+        if response is None:
+            raise HTTPException(status_code=403, detail="No access to this post")
+        return LikeResponse(success=True)
+    except grpc.RpcError as e:
+        if e.code() == grpc.StatusCode.NOT_FOUND:
+            raise HTTPException(status_code=404, detail="Post not found")
+        elif e.code() == grpc.StatusCode.PERMISSION_DENIED:
+            raise HTTPException(status_code=403, detail="No access to this post")
+        raise HTTPException(
+            status_code=500,
+            detail=f"gRPC error: {e.details()}"
+        )

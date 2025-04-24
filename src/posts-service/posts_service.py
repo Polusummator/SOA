@@ -21,6 +21,15 @@ class PostsService(posts_service_pb2_grpc.PostsServiceServicer):
             tags=post_data["tags"]
         )
 
+    def _map_to_proto_comment(self, comment_data):
+        return posts_service_pb2.Comment(
+            id=comment_data["id"],
+            description=comment_data["description"],
+            created_at=comment_data["created_at"].isoformat(),
+            post_id=comment_data["post_id"],
+            creator_id=comment_data["creator_id"]
+        )
+
     def _handle_db_error(self, context, e):
         context.set_code(grpc.StatusCode.INTERNAL)
         context.set_details(f"Database error: {str(e)}")
@@ -106,6 +115,60 @@ class PostsService(posts_service_pb2_grpc.PostsServiceServicer):
         except Exception as e:
             self._handle_db_error(context, e)
             return posts_service_pb2.ListPostsResponse()
+
+    def CommentPost(self, request, context):
+        try:
+            if not self.db.can_access_post(request.post_id, request.creator_id):
+                context.set_code(grpc.StatusCode.PERMISSION_DENIED)
+                context.set_details("No access to this post")
+                return posts_service_pb2.CommentPostResponse()
+
+            comment_data = self.db.create_comment(
+                description=request.description,
+                post_id=request.post_id,
+                creator_id=request.creator_id
+            )
+            return posts_service_pb2.CommentPostResponse(
+                comment=self._map_to_proto_comment(comment_data)
+            )
+        except Exception as e:
+            self._handle_db_error(context, e)
+            return posts_service_pb2.CommentPostResponse()
+
+    def ListComments(self, request, context):
+        try:
+            result = self.db.list_comments(
+                post_id=request.post_id,
+                user_id=request.user_id,
+                page=request.page,
+                page_size=request.page_size
+            )
+
+            if result is None:
+                context.set_code(grpc.StatusCode.PERMISSION_DENIED)
+                context.set_details("No access to this post or post not found")
+                return posts_service_pb2.ListCommentsResponse()
+
+            return posts_service_pb2.ListCommentsResponse(
+                comments=[self._map_to_proto_comment(comment) for comment in result["comments"]],
+                total=result["total"],
+                page=result["page"],
+                page_size=result["page_size"]
+            )
+        except Exception as e:
+            self._handle_db_error(context, e)
+            return posts_service_pb2.ListCommentsResponse()
+
+    def LikePost(self, request, context):
+        try:
+            if not self.db.can_access_post(request.post_id, request.user_id):
+                context.set_code(grpc.StatusCode.PERMISSION_DENIED)
+                context.set_details("No access to this post")
+                return posts_service_pb2.LikePostResponse()
+            return posts_service_pb2.LikePostResponse()
+        except Exception as e:
+            self._handle_db_error(context, e)
+            return posts_service_pb2.LikePostResponse()
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
