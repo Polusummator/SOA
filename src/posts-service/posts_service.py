@@ -48,6 +48,22 @@ class PostsService(posts_service_pb2_grpc.PostsServiceServicer):
                 is_private=request.is_private,
                 tags=request.tags
             )
+
+            event = {
+                "event_type": "post_created",
+                "post_id": post_data["id"],
+                "creator_id": post_data["creator_id"],
+                "created_at": post_data["created_at"].isoformat(),
+                "metadata": {
+                    "is_private": post_data["is_private"]
+                }
+            }
+            self.kafka_producer.produce(
+                topic="post-events",
+                key=str(post_data["id"]),
+                value=event
+            )
+
             return posts_service_pb2.CreatePostResponse(
                 post=self._map_to_proto_post(post_data)
             )
