@@ -32,7 +32,7 @@ class Comment(Base):
     id = Column(Integer, primary_key=True, index=True)
     description = Column(String, nullable=False)
     created_at = Column(DateTime)
-    post_id = Column(Integer, ForeignKey("posts.id"))
+    post_id = Column(Integer, ForeignKey("posts.id", ondelete="CASCADE"))
     creator_id = Column(Integer)
 
 class PostsDB:
