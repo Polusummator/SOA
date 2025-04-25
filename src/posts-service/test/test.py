@@ -1,5 +1,5 @@
 import pytest
-from database import PostsDB
+from database import *
 from posts_service import PostsService
 import posts_service_pb2
 import posts_service_pb2_grpc
@@ -9,7 +9,11 @@ from unittest.mock import MagicMock
 @pytest.fixture(scope="function")
 def posts_service():
     db = PostsDB()
-    db.delete_all_posts()
+    with db.Session() as session:
+        session.query(Comment).delete()
+        session.query(PostTag).delete()
+        session.query(Post).delete()
+        session.commit()
     service = PostsService()
     service.db = db
     return service
@@ -216,5 +220,183 @@ def test_update_post_with_wrong_user(posts_service, context):
         tags=["updated", "post"]
     )
     update_response = posts_service.UpdatePost(update_request, context)
+    assert context.set_code.call_count == 1
+    assert context.set_code.call_args[0][0] == StatusCode.PERMISSION_DENIED
+
+
+def test_comment_post(posts_service, context):
+    create_request = posts_service_pb2.CreatePostRequest(
+        title="Test Post",
+        description="Test content",
+        creator_id=1,
+        is_private=False,
+        tags=["test"]
+    )
+    post = posts_service.CreatePost(create_request, context).post
+
+    comment_request = posts_service_pb2.CommentPostRequest(
+        description="Great post!",
+        post_id=post.id,
+        creator_id=2
+    )
+    response = posts_service.CommentPost(comment_request, context)
+
+    assert response.comment.description == "Great post!"
+    assert response.comment.post_id == post.id
+    assert response.comment.creator_id == 2
+    assert context.set_code.call_count == 0
+
+
+def test_comment_nonexistent_post(posts_service, context):
+    comment_request = posts_service_pb2.CommentPostRequest(
+        description="Test comment",
+        post_id=999,
+        creator_id=1
+    )
+    response = posts_service.CommentPost(comment_request, context)
+
+    assert context.set_code.call_count == 1
+    assert context.set_code.call_args[0][0] == StatusCode.PERMISSION_DENIED
+
+
+def test_list_comments(posts_service, context):
+    post_request = posts_service_pb2.CreatePostRequest(
+        title="Post with comments",
+        description="Content",
+        creator_id=1,
+        is_private=False,
+        tags=[]
+    )
+    post = posts_service.CreatePost(post_request, context).post
+
+    for i in range(3):
+        comment_request = posts_service_pb2.CommentPostRequest(
+            description=f"Comment {i}",
+            post_id=post.id,
+            creator_id=i + 1
+        )
+        posts_service.CommentPost(comment_request, context)
+
+    list_request = posts_service_pb2.ListCommentsRequest(
+        post_id=post.id,
+        page=1,
+        page_size=10,
+        user_id=1
+    )
+    response = posts_service.ListComments(list_request, context)
+
+    assert len(response.comments) == 3
+    assert response.total == 3
+    assert response.page == 1
+    assert response.page_size == 10
+
+
+def test_list_comments_pagination(posts_service, context):
+    post_request = posts_service_pb2.CreatePostRequest(
+        title="Post for pagination",
+        description="Content",
+        creator_id=1,
+        is_private=False,
+        tags=[]
+    )
+    post = posts_service.CreatePost(post_request, context).post
+
+    for i in range(15):
+        comment_request = posts_service_pb2.CommentPostRequest(
+            description=f"Comment {i}",
+            post_id=post.id,
+            creator_id=1
+        )
+        posts_service.CommentPost(comment_request, context)
+
+    list_request = posts_service_pb2.ListCommentsRequest(
+        post_id=post.id,
+        page=2,
+        page_size=10,
+        user_id=1
+    )
+    response = posts_service.ListComments(list_request, context)
+
+    assert len(response.comments) == 5
+    assert response.total == 15
+    assert response.page == 2
+    assert response.page_size == 10
+
+
+def test_list_comments_private_post(posts_service, context):
+    post_request = posts_service_pb2.CreatePostRequest(
+        title="Private post",
+        description="Secret content",
+        creator_id=1,
+        is_private=True,
+        tags=[]
+    )
+    post = posts_service.CreatePost(post_request, context).post
+
+    comment_request = posts_service_pb2.CommentPostRequest(
+        description="My comment",
+        post_id=post.id,
+        creator_id=1
+    )
+    posts_service.CommentPost(comment_request, context)
+
+    list_request = posts_service_pb2.ListCommentsRequest(
+        post_id=post.id,
+        page=1,
+        page_size=10,
+        user_id=2
+    )
+    response = posts_service.ListComments(list_request, context)
+
+    assert len(response.comments) == 0
+    assert response.total == 0
+
+
+def test_like_post(posts_service, context):
+    post_request = posts_service_pb2.CreatePostRequest(
+        title="Post to like",
+        description="Content",
+        creator_id=1,
+        is_private=False,
+        tags=[]
+    )
+    post = posts_service.CreatePost(post_request, context).post
+
+    like_request = posts_service_pb2.LikePostRequest(
+        user_id=2,
+        post_id=post.id
+    )
+    response = posts_service.LikePost(like_request, context)
+
+    assert context.set_code.call_count == 0
+
+
+def test_like_nonexistent_post(posts_service, context):
+    like_request = posts_service_pb2.LikePostRequest(
+        user_id=1,
+        post_id=999
+    )
+    response = posts_service.LikePost(like_request, context)
+
+    assert context.set_code.call_count == 1
+    assert context.set_code.call_args[0][0] == StatusCode.PERMISSION_DENIED
+
+
+def test_like_private_post(posts_service, context):
+    post_request = posts_service_pb2.CreatePostRequest(
+        title="Private post",
+        description="Secret content",
+        creator_id=1,
+        is_private=True,
+        tags=[]
+    )
+    post = posts_service.CreatePost(post_request, context).post
+
+    like_request = posts_service_pb2.LikePostRequest(
+        user_id=2,
+        post_id=post.id
+    )
+    response = posts_service.LikePost(like_request, context)
+
     assert context.set_code.call_count == 1
     assert context.set_code.call_args[0][0] == StatusCode.PERMISSION_DENIED

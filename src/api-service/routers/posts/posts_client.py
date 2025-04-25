@@ -55,3 +55,28 @@ class PostsServiceClient:
             user_id=user_id
         )
         return self.stub.ListPosts(request)
+
+    def comment_post(self, description, post_id, creator_id):
+        request = posts_service_pb2.CommentPostRequest(
+            description=description,
+            post_id=post_id,
+            creator_id=creator_id
+        )
+        return self.stub.CommentPost(request)
+
+    def list_comments(self, page, page_size, user_id, post_id):
+        request = posts_service_pb2.ListCommentsRequest(
+            page=page,
+            page_size=page_size,
+            user_id=user_id,
+            post_id=post_id
+        )
+        return self.stub.ListComments(request)
+
+
+    def like_post(self, user_id, post_id):
+        request = posts_service_pb2.LikePostRequest(
+            user_id=user_id,
+            post_id=post_id
+        )
+        return self.stub.LikePost(request)

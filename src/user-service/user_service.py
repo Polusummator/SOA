@@ -1,13 +1,17 @@
 from fastapi import FastAPI, HTTPException, Cookie, Response
 import uvicorn
 import bcrypt
+import datetime
 
 import schemas
 from database import UsersDB
 import auth
 
+from kafka_profucer import KafkaProducer
+
 app = FastAPI()
 db = UsersDB()
+kafka_producer = KafkaProducer()
 
 @app.post("/user/register")
 def register(user: schemas.UserAuth):
@@ -15,9 +19,24 @@ def register(user: schemas.UserAuth):
     if db_user:
         raise HTTPException(status_code=400, detail="User already exists")
     try:
-        db.create_user(user)
+        created_user = db.create_user(user)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    event = {
+        "event_type": "user_registered",
+        "user_id": created_user["id"],
+        "username": created_user["username"],
+        "email": created_user["email"],
+        "registration_date": created_user["created_at"],
+        "metadata": {
+            "source": "user-service"
+        }
+    }
+    kafka_producer.produce(
+        topic="user-events",
+        key=str(created_user["id"]),
+        value=event
+    )
     return {"msg": "User registered"}
 
 @app.post("/user/login")

@@ -63,6 +63,13 @@ class UsersDB:
                 )
                 session.add(new_profile)
                 session.commit()
+
+                return {
+                    "id": new_user.id,
+                    "username": new_user.username,
+                    "email": new_user.email,
+                    "created_at": time_now.isoformat()
+                }
         except SQLAlchemyError as e:
             raise ValueError(f"An error occurred: {e}")
 

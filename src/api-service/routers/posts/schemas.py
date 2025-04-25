@@ -19,3 +19,21 @@ class PostsListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+class CommentBase(BaseModel):
+    description: str
+
+class CommentResponse(CommentBase):
+    id: int
+    created_at: datetime.datetime
+    post_id: int
+    creator_id: int
+
+class CommentsListResponse(BaseModel):
+    comments: List[CommentResponse]
+    total: int
+    page: int
+    page_size: int
+
+class LikeResponse(BaseModel):
+    success: bool

@@ -100,3 +100,27 @@ curl -b cookies.txt -X DELETE "http://localhost:8000/posts/1"
 
 curl -b cookies.txt -X GET "http://localhost:8000/posts/1"
 ```
+
+```shell
+# Создание комментария
+curl -b cookies.txt -X POST "http://localhost:8000/posts/1/comments" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Comment"
+  }'
+
+# Получение списка комментариев
+curl -b cookies.txt -X GET "http://localhost:8000/posts/1/comments?page=1&page_size=10"
+
+# Попытка оставить комментарий к приватному чужому посту
+curl -b hacker_cookies.txt -X POST "http://localhost:8000/posts/2/comments" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "description": "Comment"
+  }'
+```
+
+```shell
+# Лайк поста
+curl -b cookies.txt -X POST "http://localhost:8000/posts/1/like"
+```
