@@ -6,3 +6,5 @@ grpcio-tools>=1.62.3
 
 pytest>=7.4.4
 pytest-cov>=6.0.0
+
+confluent-kafka>=2.10.0
