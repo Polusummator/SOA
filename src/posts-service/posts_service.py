@@ -4,10 +4,14 @@ import grpc
 import posts_service_pb2
 import posts_service_pb2_grpc
 from concurrent import futures
+import datetime
+
+from kafka_profucer import KafkaProducer
 
 class PostsService(posts_service_pb2_grpc.PostsServiceServicer):
     def __init__(self):
         self.db = PostsDB()
+        self.kafka_producer = KafkaProducer()
 
     def _map_to_proto_post(self, post_data):
         return posts_service_pb2.Post(
@@ -92,6 +96,18 @@ class PostsService(posts_service_pb2_grpc.PostsServiceServicer):
                 context.set_details("Post not found or access denied")
                 return posts_service_pb2.GetPostResponse()
 
+            event = {
+                "event_type": "post_viewed",
+                "user_id": request.user_id,
+                "post_id": request.id,
+                "timestamp": datetime.datetime.now().isoformat()
+            }
+            self.kafka_producer.produce(
+                topic="post-interactions",
+                key=f"{request.user_id}-{request.id}",
+                value=event
+            )
+
             return posts_service_pb2.GetPostResponse(
                 post=self._map_to_proto_post(post_data)
             )
@@ -128,6 +144,20 @@ class PostsService(posts_service_pb2_grpc.PostsServiceServicer):
                 post_id=request.post_id,
                 creator_id=request.creator_id
             )
+
+            event = {
+                "event_type": "post_commented",
+                "user_id": request.creator_id,
+                "post_id": request.post_id,
+                "comment_id": comment_data["id"],
+                "timestamp": datetime.datetime.now().isoformat()
+            }
+            self.kafka_producer.produce(
+                topic="post-interactions",
+                key=f"{request.creator_id}-{request.post_id}",
+                value=event
+            )
+
             return posts_service_pb2.CommentPostResponse(
                 comment=self._map_to_proto_comment(comment_data)
             )
@@ -165,6 +195,19 @@ class PostsService(posts_service_pb2_grpc.PostsServiceServicer):
                 context.set_code(grpc.StatusCode.PERMISSION_DENIED)
                 context.set_details("No access to this post")
                 return posts_service_pb2.LikePostResponse()
+
+            event = {
+                "event_type": "post_liked",
+                "user_id": request.user_id,
+                "post_id": request.post_id,
+                "timestamp": datetime.datetime.now().isoformat()
+            }
+            self.kafka_producer.produce(
+                topic="post-interactions",
+                key=f"{request.user_id}-{request.post_id}",
+                value=event
+            )
+
             return posts_service_pb2.LikePostResponse()
         except Exception as e:
             self._handle_db_error(context, e)
