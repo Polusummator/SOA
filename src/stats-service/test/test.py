@@ -115,3 +115,77 @@ def test_get_top_users_invalid_metric(stats_service, context):
 
     context.abort.assert_called_once_with(grpc.StatusCode.INVALID_ARGUMENT, "Invalid metric")
 
+def test_get_post_likes_timeline(stats_service):
+    service, db = stats_service
+    db.get_post_timeline.return_value = [
+        {"date": "2024-01-10", "count": 7},
+        {"date": "2024-01-11", "count": 8}
+    ]
+
+    request = pb2.PostRequest(post_id=123)
+    response = service.GetPostLikesTimeline(request, None)
+
+    assert response.post_id == 123
+    assert len(response.timeline) == 2
+    assert response.timeline[0].date == "2024-01-10"
+    assert response.timeline[0].count == 7
+
+
+def test_get_post_comments_timeline(stats_service):
+    service, db = stats_service
+    db.get_post_timeline.return_value = [
+        {"date": "2024-02-01", "count": 1}
+    ]
+
+    request = pb2.PostRequest(post_id=456)
+    response = service.GetPostCommentsTimeline(request, None)
+
+    assert response.post_id == 456
+    assert len(response.timeline) == 1
+    assert response.timeline[0].date == "2024-02-01"
+    assert response.timeline[0].count == 1
+
+
+def test_get_post_views_timeline_empty(stats_service):
+    service, db = stats_service
+    db.get_post_timeline.return_value = []
+
+    request = pb2.PostRequest(post_id=99)
+    response = service.GetPostViewsTimeline(request, None)
+
+    assert response.post_id == 99
+    assert response.timeline == []
+
+
+def test_get_post_likes_timeline_empty(stats_service):
+    service, db = stats_service
+    db.get_post_timeline.return_value = []
+
+    request = pb2.PostRequest(post_id=199)
+    response = service.GetPostLikesTimeline(request, None)
+
+    assert response.post_id == 199
+    assert response.timeline == []
+
+
+def test_get_post_comments_timeline_empty(stats_service):
+    service, db = stats_service
+    db.get_post_timeline.return_value = []
+
+    request = pb2.PostRequest(post_id=299)
+    response = service.GetPostCommentsTimeline(request, None)
+
+    assert response.post_id == 299
+    assert response.timeline == []
+
+
+def test_get_post_stats_extreme_values(stats_service):
+    service, db = stats_service
+    db.get_post_stats.return_value = {"views": 2**60, "likes": 2**55, "comments": 2**50}
+
+    request = pb2.PostRequest(post_id=999)
+    response = service.GetPostStats(request, None)
+
+    assert response.views == 2**60
+    assert response.likes == 2**55
+    assert response.comments == 2**50
