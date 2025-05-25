@@ -1,1 +1,2 @@
 python -m grpc_tools.protoc -I./proto --python_out=. --grpc_python_out=. ./proto/posts_service.proto
+python -m grpc_tools.protoc -I./proto --python_out=. --grpc_python_out=. ./proto/stats_service.proto
