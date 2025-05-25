@@ -26,6 +26,15 @@ class PostTag(Base):
     name = Column(String, nullable=False)
     post_id = Column(Integer, ForeignKey("posts.id"))
 
+class Comment(Base):
+    __tablename__ = "comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    description = Column(String, nullable=False)
+    created_at = Column(DateTime)
+    post_id = Column(Integer, ForeignKey("posts.id", ondelete="CASCADE"))
+    creator_id = Column(Integer)
+
 class PostsDB:
     def __init__(self):
         self.engine = create_engine(DATABASE_URL)
@@ -43,6 +52,15 @@ class PostsDB:
             raise
         finally:
             session.close()
+
+    def can_access_post(self, post_id, user_id):
+        with self.get_session() as session:
+            post = session.query(Post).get(post_id)
+            if not post:
+                return False
+            if post.is_private and post.creator_id != user_id:
+                return False
+            return True
 
     def create_post(self, title, description, creator_id, is_private, tags):
         with self.get_session() as session:
@@ -172,6 +190,53 @@ class PostsDB:
 
             return {
                 "posts": result,
+                "total": total,
+                "page": page,
+                "page_size": page_size
+            }
+
+    def create_comment(self, description, post_id, creator_id):
+        with self.get_session() as session:
+            comment = Comment(
+                description=description,
+                post_id=post_id,
+                creator_id=creator_id,
+                created_at=datetime.datetime.now()
+            )
+            session.add(comment)
+            session.flush()
+
+            return {
+                "id": comment.id,
+                "description": comment.description,
+                "created_at": comment.created_at,
+                "post_id": comment.post_id,
+                "creator_id": comment.creator_id
+            }
+
+    def list_comments(self, post_id, user_id, page, page_size):
+        with self.get_session() as session:
+            post = session.query(Post).get(post_id)
+            if not post:
+                return None
+            if post.is_private and post.creator_id != user_id:
+                return None
+
+            query = session.query(Comment).filter(Comment.post_id == post_id)
+            total = query.count()
+            comments = query.order_by(Comment.created_at.desc()) \
+                .offset((page - 1) * page_size) \
+                .limit(page_size) \
+                .all()
+
+            return {
+                "comments": [{
+                    "id": c.id,
+                    "description": c.description,
+                    "created_at": c.created_at,
+                    "post_id": c.post_id,
+                    "creator_id": c.creator_id
+                } for c in comments],
                 "total": total,
                 "page": page,
                 "page_size": page_size

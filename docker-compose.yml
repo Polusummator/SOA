@@ -35,6 +35,8 @@ services:
     depends_on:
       user-service-db:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - app-network
       - user-service-network
@@ -67,14 +69,70 @@ services:
         condition: service_healthy
       user-service:
         condition: service_started
+      kafka:
+        condition: service_healthy
     networks:
       - app-network
       - posts-service-network
+
+  zookeeper:
+    image: zookeeper:3.8.0
+    environment:
+      ZOO_4LW_COMMANDS_WHITELIST: "*"
+      ZOO_MAX_CLIENT_CNXNS: 1000
+    ports:
+      - "2181:2181"
+    networks:
+      - kafka-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.0.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    networks:
+      - kafka-network
+      - app-network
+    healthcheck:
+      test: nc -z localhost 9092 || exit -1
+      start_period: 15s
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      KAFKA_CLUSTERS_0_JMXPORT: 9997
+    networks:
+      - app-network
+      - kafka-network
 
 networks:
   app-network:
   user-service-network:
   posts-service-network:
+  kafka-network:
 
 volumes:
   users-data:
