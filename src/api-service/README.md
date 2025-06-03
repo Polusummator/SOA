@@ -124,3 +124,35 @@ curl -b hacker_cookies.txt -X POST "http://localhost:8000/posts/2/comments" \
 # Лайк поста
 curl -b cookies.txt -X POST "http://localhost:8000/posts/1/like"
 ```
+
+```shell
+# Статистика по посту
+curl -X GET "http://localhost:8000/stats/post/1"
+
+# Получение динамики просмотров, лайков и комментариев для поста
+curl -X GET "http://localhost:8000/stats/post/1/dynamics"
+```
+
+```shell
+# Топ постов
+# по просмотрам
+curl -X GET "http://localhost:8000/stats/top/posts?metric=post_viewed"
+
+# по лайкам
+curl -X GET "http://localhost:8000/stats/top/posts?metric=post_liked"
+
+# по комментариям
+curl -X GET "http://localhost:8000/stats/top/posts?metric=post_commented"
+```
+
+```shell
+# Топ пользователей
+# по просмотрам
+curl -X GET "http://localhost:8000/stats/top/users?metric=post_viewed"
+
+# по лайкам
+curl -X GET "http://localhost:8000/stats/top/users?metric=post_liked"
+
+# по комментариям
+curl -X GET "http://localhost:8000/stats/top/users?metric=post_commented"
+```

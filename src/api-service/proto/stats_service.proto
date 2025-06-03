@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package stats;
+
+service StatsService {
+  rpc GetPostStats(PostRequest) returns (PostStatsResponse);
+  rpc GetPostViewsTimeline(PostRequest) returns (PostTimelineResponse);
+  rpc GetPostLikesTimeline(PostRequest) returns (PostTimelineResponse);
+  rpc GetPostCommentsTimeline(PostRequest) returns (PostTimelineResponse);
+  rpc GetTopPosts(TopRequest) returns (TopPostsResponse);
+  rpc GetTopUsers(TopRequest) returns (TopUsersResponse);
+}
+
+message PostRequest {
+  uint64 post_id = 1;
+}
+
+message PostStatsResponse {
+  uint64 post_id = 1;
+  uint64 views = 2;
+  uint64 likes = 3;
+  uint64 comments = 4;
+}
+
+message DayStat {
+  string date = 1;
+  uint64 count = 2;
+}
+
+message PostTimelineResponse {
+  uint64 post_id = 1;
+  repeated DayStat timeline = 2;
+}
+
+message TopRequest {
+  string metric = 1;
+}
+
+message PostAggregate {
+  uint64 post_id = 1;
+  uint64 count = 2;
+}
+
+message TopPostsResponse {
+  repeated PostAggregate posts = 1;
+}
+
+message UserAggregate {
+  uint64 user_id = 1;
+  uint64 count = 2;
+}
+
+message TopUsersResponse {
+  repeated UserAggregate users = 1;
+}

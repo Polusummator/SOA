@@ -6,6 +6,7 @@ services:
     depends_on:
       - user-service
       - posts-service
+      - stats-service
     networks:
       - app-network
 
@@ -128,12 +129,46 @@ services:
       - app-network
       - kafka-network
 
+  stats-service:
+    build: src/stats-service
+    ports:
+      - "5002:5000"
+    depends_on:
+      stats-service-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - app-network
+      - stats-service-network
+
+  stats-service-db:
+      image: clickhouse/clickhouse-server:latest
+      ports:
+        - "8123:8123"
+        - "9000:9000"
+      environment:
+        CLICKHOUSE_USER: user
+        CLICKHOUSE_PASSWORD: password
+      volumes:
+        - stats-data:/var/lib/clickhouse
+      networks:
+        - app-network
+        - stats-service-network
+      healthcheck:
+        test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8123/ping"]
+        interval: 5s
+        timeout: 2s
+        retries: 5
+
 networks:
   app-network:
   user-service-network:
   posts-service-network:
+  stats-service-network:
   kafka-network:
 
 volumes:
   users-data:
   posts-data:
+  stats-data:
