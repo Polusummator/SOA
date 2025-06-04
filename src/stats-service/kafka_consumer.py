@@ -21,13 +21,12 @@ def wait_for_topics(bootstrap_servers, topics):
         print(f"Waiting for topics to be created: {missing}", flush=True)
         time.sleep(3)
 
-def consume():
+def consume(mock_db=None, mock_consumer=None):
     if not wait_for_topics(BOOTSTRAP_SERVERS, TOPICS):
         print("Topics not available, exiting", flush=True)
         return
-
-    db = StatsDB()
-    consumer = Consumer({
+    db = mock_db or StatsDB()
+    consumer = mock_consumer or Consumer({
         'bootstrap.servers': BOOTSTRAP_SERVERS,
         'group.id': 'stats-consumer',
         'auto.offset.reset': 'earliest'
